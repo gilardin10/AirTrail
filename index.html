@@ -206,7 +206,7 @@
 <script>
 // ── Google Sheets data source ─────────────────────────────────────
 const SHEET_ID = '1NjhpHARDgRMF5Q5LQT3YMbCjHbovPYyx';
-const SHEET_GID = '678388703';
+const SHEET_GID = '1788826696';
 
 function parseCSVLine(line) {
   const result = [];
@@ -233,7 +233,26 @@ async function loadSheetData() {
     const obj = {};
     headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim(); });
     const date = obj.date || '';
-    const bool = v => v.toLowerCase() === 'true' || v === '1' || v.toLowerCase() === 'yes';
+    const from = obj.from || '';
+    const to   = obj.to   || '';
+    const route = (from && to) ? `${from} - ${to}` : (from || to);
+
+    // "2,000 km" → 2000
+    const distRaw = (obj.distance || '').replace(/,/g, '').replace(/[^\d.]/g, '');
+    const distance = parseFloat(distRaw) || 0;
+
+    // "3.5 h" → "3h 30m"
+    const timeRaw = obj.time || '';
+    let duration = '';
+    const tm = timeRaw.match(/^([\d.]+)/);
+    if (tm) {
+      const total = parseFloat(tm[1]);
+      const h = Math.floor(total);
+      const m = Math.round((total - h) * 60);
+      duration = `${h}h ${String(m).padStart(2, '0')}m`;
+    }
+
+    const bool = v => v.toLowerCase() === 'true' || v === '1';
     const travelers = [
       bool(obj.gil   || '') ? 'G' : '',
       bool(obj.magda || '') ? 'M' : '',
@@ -242,10 +261,10 @@ async function loadSheetData() {
     return {
       year: date ? parseInt(date.split('-')[0]) : null,
       date,
-      route: obj.route || '',
-      trip: obj.trip || '',
-      distance: parseInt(obj.distance) || 0,
-      duration: obj.duration || '',
+      route,
+      trip: obj.reason || '',
+      distance,
+      duration,
       travelers: travelers.length ? travelers : ['G'],
     };
   }).filter(f => f.date && f.route);
