@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AirTrail</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{overflow-x:hidden;max-width:100vw}
+  :root{
+    --bg:#0d1117;--card:#161b22;--border:#30363d;
+    --text:#e6edf3;--muted:#8b949e;
+    --blue:#58a6ff;--green:#3fb950;--orange:#f0883e;
+    --purple:#bc8cff;--pink:#ff7b72;
+    --holiday:#58a6ff;--home:#3fb950;--social:#f0883e;
+    --business:#bc8cff;--relocation:#ff7b72;
+  }
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;min-height:100vh}
+
+  /* ── Header ── */
+  header{padding:20px 32px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  .logo{font-size:20px;font-weight:700;letter-spacing:-0.5px}
+  .logo span{color:var(--blue)}
+
+  /* ── Stats ── */
+  .stats-bar{display:flex;gap:8px;flex-wrap:wrap;padding:16px 32px;border-bottom:1px solid var(--border)}
+  .stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 18px;flex:1;min-width:120px;min-width:0}
+  .stat .val{font-size:24px;font-weight:700;line-height:1}
+  .stat .lbl{color:var(--muted);font-size:12px;margin-top:4px}
+
+  /* ── Filters ── */
+  .filters{display:flex;gap:10px;flex-wrap:wrap;padding:12px 32px;background:var(--card);border-bottom:1px solid var(--border);align-items:flex-start}
+  .filter-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1;min-width:0}
+  .filters label{color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.6px;white-space:nowrap;padding-top:5px}
+  .filter-group{display:flex;gap:6px;flex-wrap:wrap;min-width:0}
+  .chip{background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 11px;border-radius:20px;cursor:pointer;font-size:12px;transition:all .15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  .chip:hover{border-color:var(--blue);color:var(--blue)}
+  .chip.active{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+  .chip.active.holiday{background:var(--holiday);border-color:var(--holiday)}
+  .chip.active.visit-home{background:var(--home);border-color:var(--home)}
+  .chip.active.social{background:var(--social);border-color:var(--social)}
+  .chip.active.business{background:var(--business);border-color:var(--business)}
+  .chip.active.relocation{background:var(--relocation);border-color:var(--relocation)}
+  .filter-sep{width:1px;height:20px;background:var(--border);flex-shrink:0;align-self:center}
+
+  /* ── Main layout ── */
+  .main{padding:20px 32px;display:grid;gap:16px;min-width:0}
+  .map-container{position:relative;min-width:0}
+  .section-title{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px}
+
+  /* ── Map ── */
+  #map{width:100%;height:420px;border-radius:12px;border:1px solid var(--border);z-index:1}
+
+  /* ── Charts ── */
+  .charts-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  .chart-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;min-width:0}
+  .chart-title{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.5px;margin-bottom:16px;text-transform:uppercase}
+  .chart-wrap{position:relative;height:220px;width:100%}
+
+  /* ── Table ── */
+  .table-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;min-width:0}
+  .table-header{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+  .table-title{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.5px;text-transform:uppercase}
+  .flight-count{color:var(--muted);font-size:12px}
+  .table-wrap{overflow-x:auto;max-height:400px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  table{width:100%;border-collapse:collapse}
+  thead th{position:sticky;top:0;background:var(--card);padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap}
+  thead th:hover{color:var(--text)}
+  thead th .sort-icon{margin-left:4px;opacity:.4}
+  thead th.sorted .sort-icon{opacity:1;color:var(--blue)}
+  tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+  tbody tr:hover{background:rgba(88,166,255,.05)}
+  tbody td{padding:10px 14px;font-size:13px;white-space:nowrap}
+  td.route{font-weight:500}
+  td.date{color:var(--muted)}
+  .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
+  .badge.Holiday{background:rgba(88,166,255,.15);color:var(--holiday)}
+  .badge.Visit-Home{background:rgba(63,185,80,.15);color:var(--green)}
+  .badge.Social{background:rgba(240,136,62,.15);color:var(--orange)}
+  .badge.Business{background:rgba(188,140,255,.15);color:var(--purple)}
+  .badge.Relocation{background:rgba(255,123,114,.15);color:var(--pink)}
+  .badge.Other{background:rgba(139,148,158,.15);color:var(--muted)}
+  .no-data{color:var(--muted)}
+
+  /* ── Loading overlay ── */
+  #loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999}
+  .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .load-msg{color:var(--muted);font-size:14px}
+
+  /* ── Mobile ── */
+  @media(max-width:768px){
+    header{padding:12px 16px}
+    .stats-bar{padding:10px 16px;gap:6px}
+    .stat{flex:0 0 calc(50% - 3px);padding:10px 12px}
+    .stat .val{font-size:20px}
+    .filters{padding:10px 16px;flex-direction:column;gap:8px}
+    .filter-row{width:100%}
+    .filter-sep{display:none}
+    .main{padding:12px 16px;gap:12px}
+    #map{height:260px}
+    .charts-grid{grid-template-columns:1fr}
+    .chart-wrap{height:180px}
+    tbody td{padding:8px 10px;font-size:12px}
+    thead th{padding:8px 10px;font-size:10px}
+  }
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div><div class="load-msg">Loading flight data from Google Sheets…</div></div>
+
+<header>
+  <div class="logo">✈ Air<span>Trail</span></div>
+  <div style="color:var(--muted);font-size:12px" id="header-range"></div>
+</header>
+
+<div class="stats-bar">
+  <div class="stat"><div class="val" id="s-total">—</div><div class="lbl">Total Flights</div></div>
+  <div class="stat"><div class="val" id="s-distance">—</div><div class="lbl">km Flown</div></div>
+  <div class="stat"><div class="val" id="s-airtime">—</div><div class="lbl">Time in Air</div></div>
+  <div class="stat"><div class="val" id="s-longest">—</div><div class="lbl">Longest Flight</div></div>
+  <div class="stat"><div class="val" id="s-countries">—</div><div class="lbl">Cities Visited</div></div>
+  <div class="stat"><div class="val" id="s-trips">—</div><div class="lbl">Unique Trips</div></div>
+</div>
+
+<div class="filters">
+  <div class="filter-row">
+    <label>YEAR</label>
+    <div class="filter-group" id="year-filters"></div>
+  </div>
+  <div class="filter-sep"></div>
+  <div class="filter-row">
+    <label>TYPE</label>
+    <div class="filter-group" id="type-filters"></div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="map-container">
+    <div class="section-title">Routes Map</div>
+    <div id="map"></div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">Flights per Year</div>
+      <div class="chart-wrap"><canvas id="yearChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Distance per Year (km)</div>
+      <div class="chart-wrap"><canvas id="distChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Top Destinations</div>
+      <div class="chart-wrap"><canvas id="destChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Trip Types</div>
+      <div class="chart-wrap"><canvas id="typeChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <div class="table-title">Flight Log</div>
+      <div class="flight-count" id="showing-count"></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th data-sort="date">Date <span class="sort-icon">↕</span></th>
+            <th data-sort="route">Route <span class="sort-icon">↕</span></th>
+            <th data-sort="tripName">Trip <span class="sort-icon">↕</span></th>
+            <th data-sort="tripType">Type <span class="sort-icon">↕</span></th>
+            <th data-sort="distance">Distance <span class="sort-icon">↕</span></th>
+            <th data-sort="duration">Duration <span class="sort-icon">↕</span></th>
+          </tr>
+        </thead>
+        <tbody id="flight-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Google Sheets data source ─────────────────────────────────────
+const SHEET_ID = '1NjhpHARDgRMF5Q5LQT3YMbCjHbovPYyx';
+const SHEET_GID = '678388703';
+
+function parseCSVLine(line) {
+  const result = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+    else { cur += c; }
+  }
+  result.push(cur.trim());
+  return result;
+}
+
+async function loadSheetData() {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SHEET_GID}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const csv = await res.text();
+  const lines = csv.trim().split('\n').filter(l => l.trim());
+  const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().trim());
+  return lines.slice(1).map(line => {
+    const vals = parseCSVLine(line);
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim(); });
+    const date = obj.date || '';
+    return {
+      year: date ? parseInt(date.split('-')[0]) : null,
+      date,
+      route: obj.route || '',
+      trip: obj.trip || '',
+      distance: parseInt(obj.distance) || 0,
+      duration: obj.duration || ''
+    };
+  }).filter(f => f.date && f.route);
+}
+
+// ── City coordinates ──────────────────────────────────────────────
+const COORDS = {
+  porto:[41.1496,-8.6109],warsaw:[52.2297,21.0122],malaga:[36.7213,-4.4217],
+  istanbul:[41.0082,28.9784],'new york':[40.7128,-74.006],
+  'tel aviv':[32.0853,34.7818],madrid:[40.4168,-3.7038],
+  bergamo:[45.6983,9.6773],doha:[25.2854,51.531],tokyo:[35.6762,139.6503],
+  zakynthos:[37.7908,20.8896],larnaca:[34.8751,33.6249],
+  reykjavik:[64.1265,-21.8174],
+  terceira:[38.7622,-27.0686],'ponta delgada':[37.7412,-25.6756],
+  berlin:[52.52,13.405],naples:[40.8518,14.2681],vienna:[48.2082,16.3738],
+  budapest:[47.4979,19.0402],lisbon:[38.7223,-9.1393],paris:[48.8566,2.3522],
+  cagliari:[39.2238,9.1217],tenerife:[28.2916,-16.6291],
+  krakow:[50.0647,19.945],katowice:[50.2649,19.0238],
+  bangkok:[13.7563,100.5018],singapore:[1.3521,103.8198],
+  krabi:[8.0863,98.9063],gdansk:[54.352,18.6466],antalya:[36.8969,30.7133],
+  stuttgart:[48.7758,9.1829],amsterdam:[52.3676,4.9041],
+  london:[51.5074,-0.1278],athens:[37.9838,23.7275],malta:[35.9375,14.3754],
+  wroclaw:[51.1079,17.0385],faro:[37.0194,-7.9322],poznan:[52.4064,16.9252],
+  nice:[43.7102,7.262],brussels:[50.8503,4.3517],rome:[41.9028,12.4964],
+  barcelona:[41.3851,2.1734],'saint petersburg':[59.9343,30.3351],
+  nuremberg:[49.4521,11.0767],madeira:[32.6669,-16.9241],
+  'baden-baden':[48.7605,8.2392]
+};
+
+// Routes are now "City (CODE) -> City (CODE)" — extract city name before the "("
+function parseRoute(r){
+  const parts = r.split('->').map(p=>p.trim());
+  if(parts.length>=2) return [extractCity(parts[0]), extractCity(parts[parts.length-1])];
+  return [extractCity(r), null];
+}
+
+function extractCity(s){
+  return s.replace(/\s*\([^)]*\)\s*$/, '').trim();
+}
+
+function normCity(s){
+  s = extractCity(s).toLowerCase().trim();
+  const aliases = {'qatar':'doha','poznań':'poznan'};
+  return aliases[s] || s;
+}
+
+function getCoords(cityRaw){
+  const n = normCity(cityRaw);
+  if(COORDS[n]) return COORDS[n];
+  for(const [k,v] of Object.entries(COORDS)) if(n.includes(k)||k.includes(n)) return v;
+  return null;
+}
+
+// ── Trip type classification ──────────────────────────────────────
+const TYPE_COLOR = {
+  Holiday:'#58a6ff','Visit Home':'#3fb950',Social:'#f0883e',
+  Business:'#bc8cff',Relocation:'#ff7b72',Other:'#8b949e'
+};
+
+function classifyTrip(trip){
+  if(!trip) return null;
+  const t = trip.toLowerCase();
+  if(t.includes('business')) return 'Business';
+  if(t.includes('moving')||t.includes('leaving')) return 'Relocation';
+  if(t.includes('home')||t.includes('visit home')||t.includes('christmas at')||t.includes('nye at home')) return 'Visit Home';
+  if(t.includes('birthday')||t.includes('wedding')||t.includes("parents")) return 'Social';
+  return 'Holiday';
+}
+
+function processFlights(raw){
+  return raw.map(f=>({
+    ...f,
+    tripType: classifyTrip(f.trip) || 'Other',
+    tripLabel: f.trip || ''
+  })).sort((a,b)=>{
+    if(!a.date&&!b.date) return 0;
+    if(!a.date) return 1;
+    if(!b.date) return -1;
+    return new Date(a.date)-new Date(b.date);
+  });
+}
+
+let FLIGHTS = [];
+
+// ── Filters state ────────────────────────────────────────────────
+let activeYears = new Set();  // empty = All
+let activeTypes = new Set();  // empty = All
+let sortCol = 'date';
+let sortDir = -1;
+
+function filtered(){
+  return FLIGHTS.filter(f=>{
+    if(activeYears.size > 0 && !activeYears.has(f.year)) return false;
+    if(activeTypes.size > 0 && !activeTypes.has(f.tripType)) return false;
+    return true;
+  });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+function parseMins(dur){
+  if(!dur) return 0;
+  const h=parseInt(dur)||0;
+  const m=parseInt((dur.split('h')[1]||'').replace('m',''))||0;
+  return h*60+m;
+}
+function fmtMins(total){
+  return `${Math.floor(total/60)}h ${String(total%60).padStart(2,'0')}m`;
+}
+
+// ── Stats ────────────────────────────────────────────────────────
+function updateStats(){
+  const all = FLIGHTS;
+  document.getElementById('s-total').textContent = all.length;
+
+  const totalDist = all.reduce((s,f)=>s+(f.distance||0),0);
+  document.getElementById('s-distance').textContent = totalDist.toLocaleString();
+
+  const totalMins = all.reduce((s,f)=>s+parseMins(f.duration),0);
+  document.getElementById('s-airtime').textContent = fmtMins(totalMins);
+
+  const maxMins = Math.max(...all.map(f=>parseMins(f.duration)));
+  const longest = all.find(f=>parseMins(f.duration)===maxMins);
+  document.getElementById('s-longest').textContent = longest ? longest.duration : '—';
+
+  const cities = new Set();
+  all.forEach(f=>{
+    const [a,b]=parseRoute(f.route);
+    if(a) cities.add(normCity(a));
+    if(b) cities.add(normCity(b));
+  });
+  document.getElementById('s-countries').textContent = cities.size;
+
+  const trips = new Set(all.map(f=>f.tripLabel).filter(Boolean));
+  document.getElementById('s-trips').textContent = trips.size;
+
+  const years = new Set(all.map(f=>f.year));
+  const minY = Math.min(...[...years]), maxY = Math.max(...[...years]);
+  document.getElementById('header-range').textContent = `${minY} – ${maxY}`;
+}
+
+// ── Filters UI ────────────────────────────────────────────────────
+function buildFilters(){
+  const years = [...new Set(FLIGHTS.map(f=>f.year))].sort((a,b)=>a-b);
+  const types = ['Holiday','Visit Home','Social','Business','Relocation','Other'];
+
+  function renderYearChips(){
+    const yf = document.getElementById('year-filters');
+    yf.innerHTML='';
+    const allBtn = document.createElement('button');
+    allBtn.className='chip'+(activeYears.size===0?' active':'');
+    allBtn.textContent='All';
+    allBtn.onclick=()=>{ activeYears.clear(); renderYearChips(); refresh(); };
+    yf.appendChild(allBtn);
+    years.forEach(y=>{
+      const btn=document.createElement('button');
+      btn.className='chip'+(activeYears.has(y)?' active':'');
+      btn.textContent=y;
+      btn.onclick=()=>{
+        if(activeYears.has(y)) activeYears.delete(y); else activeYears.add(y);
+        renderYearChips(); refresh();
+      };
+      yf.appendChild(btn);
+    });
+  }
+
+  function renderTypeChips(){
+    const tf = document.getElementById('type-filters');
+    tf.innerHTML='';
+    const allBtn = document.createElement('button');
+    allBtn.className='chip'+(activeTypes.size===0?' active':'');
+    allBtn.textContent='All';
+    allBtn.onclick=()=>{ activeTypes.clear(); renderTypeChips(); refresh(); };
+    tf.appendChild(allBtn);
+    types.forEach(t=>{
+      const cls=t.replace(/\s+/g,'-').toLowerCase();
+      const isActive=activeTypes.has(t);
+      const btn=document.createElement('button');
+      btn.className='chip'+(isActive?` active ${cls}`:'');
+      btn.textContent=t;
+      btn.onclick=()=>{
+        if(activeTypes.has(t)) activeTypes.delete(t); else activeTypes.add(t);
+        renderTypeChips(); refresh();
+      };
+      tf.appendChild(btn);
+    });
+  }
+
+  renderYearChips();
+  renderTypeChips();
+}
+
+// ── Map ──────────────────────────────────────────────────────────
+const isMobile = () => window.innerWidth <= 768;
+const map = L.map('map',{zoomControl:true, scrollWheelZoom:false, tap:false}).setView([40,15], isMobile()?2:3);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+  attribution:'&copy; OpenStreetMap, &copy; CartoDB',maxZoom:19
+}).addTo(map);
+
+let routeLayers = L.layerGroup().addTo(map);
+let markerLayers = L.layerGroup().addTo(map);
+
+function bezier(from,to){
+  const pts=[];
+  const mlat=(from[0]+to[0])/2, mlng=(from[1]+to[1])/2;
+  const dlat=to[0]-from[0], dlng=to[1]-from[1];
+  const dist=Math.sqrt(dlat*dlat+dlng*dlng);
+  const off=dist*0.25;
+  const pl=-dlng/dist*off, plng=dlat/dist*off;
+  const cl=mlat+pl, clng=mlng+plng;
+  for(let t=0;t<=1;t+=0.025){
+    pts.push([(1-t)*(1-t)*from[0]+2*(1-t)*t*cl+t*t*to[0],
+              (1-t)*(1-t)*from[1]+2*(1-t)*t*clng+t*t*to[1]]);
+  }
+  return pts;
+}
+
+function drawMap(flights){
+  routeLayers.clearLayers();
+  markerLayers.clearLayers();
+
+  const cityCount = {};
+  const routes = new Set();
+
+  flights.forEach(f=>{
+    const [a,b]=parseRoute(f.route);
+    const ca=a?getCoords(a):null, cb=b?getCoords(b):null;
+    if(ca){ const k=normCity(a); cityCount[k]=(cityCount[k]||0)+1; }
+    if(cb){ const k=normCity(b); cityCount[k]=(cityCount[k]||0)+1; }
+
+    if(ca&&cb){
+      const key=[normCity(a),normCity(b)].sort().join('|');
+      if(!routes.has(key)){
+        routes.add(key);
+        const color = TYPE_COLOR[f.tripType]||'#8b949e';
+        const pts = bezier(ca,cb);
+        const distLabel = f.distance ? `${f.distance.toLocaleString()} km` : '';
+        const durLabel  = f.duration || '';
+        const tip = `<b>${extractCity(a)} → ${extractCity(b)}</b>${distLabel?`<br>${distLabel}${durLabel?' · '+durLabel:''}` :''}`;
+        L.polyline(pts,{color,weight:1.5,opacity:.55,smoothFactor:1})
+          .bindTooltip(tip,{className:'leaflet-tooltip-dark',sticky:true})
+          .addTo(routeLayers);
+      }
+    }
+  });
+
+  Object.entries(cityCount).forEach(([city,cnt])=>{
+    const c=COORDS[city]; if(!c) return;
+    const r=Math.max(4,Math.min(10,3+cnt*0.5));
+    L.circleMarker(c,{radius:r,fillColor:'#e6edf3',color:'#0d1117',weight:1.5,fillOpacity:.9})
+      .bindTooltip(`<b>${city.charAt(0).toUpperCase()+city.slice(1)}</b><br>${cnt} flight${cnt>1?'s':''}`,
+        {className:'leaflet-tooltip-dark',sticky:true})
+      .addTo(markerLayers);
+  });
+}
+
+// ── Charts ───────────────────────────────────────────────────────
+let charts = {};
+const CHART_DEFAULTS = {
+  responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{display:false},tooltip:{backgroundColor:'#161b22',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e'}},
+  scales:{x:{grid:{color:'#21262d'},ticks:{color:'#8b949e'}},y:{grid:{color:'#21262d'},ticks:{color:'#8b949e'}}}
+};
+
+function buildCharts(flights){
+  // Year chart
+  const years = [...new Set(FLIGHTS.map(f=>f.year))].sort();
+  const yearCounts = years.map(y=>flights.filter(f=>f.year===y).length);
+  makeBar('yearChart',years,yearCounts,'#58a6ff');
+
+  // Distance per year chart
+  const yearDist = years.map(y=>flights.filter(f=>f.year===y).reduce((s,f)=>s+(f.distance||0),0));
+  makeBar('distChart',years,yearDist,'#bc8cff');
+
+  // Destinations chart
+  const destCount={};
+  flights.forEach(f=>{
+    const [a,b]=parseRoute(f.route);
+    [a,b].filter(Boolean).forEach(c=>{
+      const n=normCity(c);
+      destCount[n]=(destCount[n]||0)+1;
+    });
+  });
+  const topDest=Object.entries(destCount).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  makeHBar('destChart',topDest.map(d=>d[0].charAt(0).toUpperCase()+d[0].slice(1)),topDest.map(d=>d[1]));
+
+  // Type chart
+  const typeCounts={};
+  flights.forEach(f=>{ typeCounts[f.tripType]=(typeCounts[f.tripType]||0)+1; });
+  const typeEntries=Object.entries(typeCounts).sort((a,b)=>b[1]-a[1]);
+  makeDoughnut('typeChart',typeEntries.map(e=>e[0]),typeEntries.map(e=>e[1]));
+}
+
+function makeBar(id,labels,data,color){
+  const ctx=document.getElementById(id).getContext('2d');
+  if(charts[id]) charts[id].destroy();
+  charts[id]=new Chart(ctx,{type:'bar',data:{labels,datasets:[{data,backgroundColor:color+'99',borderColor:color,borderWidth:1,borderRadius:4}]},
+    options:{...CHART_DEFAULTS,plugins:{...CHART_DEFAULTS.plugins}}});
+}
+
+function makeHBar(id,labels,data){
+  const ctx=document.getElementById(id).getContext('2d');
+  if(charts[id]) charts[id].destroy();
+  charts[id]=new Chart(ctx,{type:'bar',
+    data:{labels,datasets:[{data,backgroundColor:'#f0883e99',borderColor:'#f0883e',borderWidth:1,borderRadius:4}]},
+    options:{...CHART_DEFAULTS,indexAxis:'y',plugins:{...CHART_DEFAULTS.plugins},
+      scales:{x:{grid:{color:'#21262d'},ticks:{color:'#8b949e'}},y:{grid:{color:'#21262d'},ticks:{color:'#8b949e',font:{size:11}}}}}});
+}
+
+function makeDoughnut(id,labels,data){
+  const ctx=document.getElementById(id).getContext('2d');
+  if(charts[id]) charts[id].destroy();
+  const colors=labels.map(l=>TYPE_COLOR[l]||'#8b949e');
+  charts[id]=new Chart(ctx,{type:'doughnut',
+    data:{labels,datasets:[{data,backgroundColor:colors.map(c=>c+'cc'),borderColor:colors,borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+      plugins:{legend:{display:true,position:'right',labels:{color:'#8b949e',font:{size:11},boxWidth:12,padding:10}},
+        tooltip:{backgroundColor:'#161b22',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e'}}}});
+}
+
+// ── Table ────────────────────────────────────────────────────────
+function buildTable(flights){
+  const sorted=[...flights].sort((a,b)=>{
+    if(sortCol==='distance') return ((a.distance||0)-(b.distance||0))*sortDir;
+    if(sortCol==='duration') return (parseMins(a.duration)-parseMins(b.duration))*sortDir;
+    let va=a[sortCol]||'', vb=b[sortCol]||'';
+    if(sortCol==='date'){va=va||'0000';vb=vb||'0000';}
+    return va<vb?sortDir:va>vb?-sortDir:0;
+  });
+
+  const tbody=document.getElementById('flight-tbody');
+  tbody.innerHTML='';
+  sorted.forEach(f=>{
+    const tr=document.createElement('tr');
+    const typeKey=f.tripType.replace(/\s+/g,'-');
+    tr.innerHTML=`
+      <td class="date">${f.date||'<span class="no-data">—</span>'}</td>
+      <td class="route">${esc(f.route)}</td>
+      <td class="trip-name">${f.tripLabel?esc(f.tripLabel):'<span class="no-data">—</span>'}</td>
+      <td><span class="badge ${typeKey}">${f.tripType}</span></td>
+      <td style="color:var(--muted)">${f.distance?f.distance.toLocaleString()+' km':'—'}</td>
+      <td style="color:var(--muted)">${f.duration||'—'}</td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('showing-count').textContent=`${sorted.length} of ${FLIGHTS.length} flights`;
+}
+
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Sort headers ─────────────────────────────────────────────────
+document.querySelectorAll('thead th[data-sort]').forEach(th=>{
+  th.addEventListener('click',()=>{
+    const col=th.dataset.sort;
+    if(sortCol===col) sortDir*=-1;
+    else{ sortCol=col; sortDir=-1; }
+    document.querySelectorAll('thead th').forEach(h=>h.classList.remove('sorted'));
+    th.classList.add('sorted');
+    th.querySelector('.sort-icon').textContent=sortDir===-1?'↓':'↑';
+    buildTable(filtered());
+  });
+});
+
+// ── Leaflet tooltip style ────────────────────────────────────────
+const style=document.createElement('style');
+style.textContent=`.leaflet-tooltip-dark{background:#161b22;border:1px solid #30363d;color:#e6edf3;border-radius:6px;font-size:12px;padding:6px 10px;}.leaflet-tooltip-dark::before{display:none}`;
+document.head.appendChild(style);
+
+// ── Main refresh ─────────────────────────────────────────────────
+function refresh(){
+  const f=filtered();
+  drawMap(f);
+  buildCharts(f);
+  buildTable(f);
+  setTimeout(()=>map.invalidateSize(),50);
+}
+
+// ── Resize handler ────────────────────────────────────────────────
+window.addEventListener('resize',()=>{
+  map.invalidateSize();
+  Object.values(charts).forEach(c=>c.resize());
+});
+
+// ── Init ─────────────────────────────────────────────────────────
+(async () => {
+  const loadingEl = document.getElementById('loading');
+  const msgEl = loadingEl.querySelector('.load-msg');
+  try {
+    const raw = await loadSheetData();
+    FLIGHTS = processFlights(raw);
+  } catch(e) {
+    msgEl.textContent = 'Failed to load data. Make sure the Google Sheet is shared publicly (Anyone with the link → Viewer).';
+    console.error(e);
+    return;
+  }
+  loadingEl.style.display = 'none';
+  updateStats();
+  buildFilters();
+  refresh();
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    map.invalidateSize();
+    map.setView([40,15], isMobile()?2:3);
+  }));
+})();
+</script>
+</body>
+</html>
