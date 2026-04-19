@@ -85,6 +85,16 @@
   .badge.Other{background:rgba(139,148,158,.15);color:var(--muted)}
   .no-data{color:var(--muted)}
 
+  /* ── Traveler badges ── */
+  .traveler-badges{display:inline-flex;gap:3px}
+  .tbadge{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:10px;font-weight:700;flex-shrink:0}
+  .tbadge.G{background:rgba(88,166,255,.2);color:#58a6ff}
+  .tbadge.M{background:rgba(255,123,114,.2);color:#ff7b72}
+  .tbadge.N{background:rgba(63,185,80,.2);color:#3fb950}
+  .chip.active.tw-G{background:#58a6ff;border-color:#58a6ff}
+  .chip.active.tw-M{background:#ff7b72;border-color:#ff7b72}
+  .chip.active.tw-N{background:#3fb950;border-color:#3fb950}
+
   /* ── Loading overlay ── */
   #loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999}
   .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
@@ -137,6 +147,11 @@
     <label>TYPE</label>
     <div class="filter-group" id="type-filters"></div>
   </div>
+  <div class="filter-sep"></div>
+  <div class="filter-row">
+    <label>WHO</label>
+    <div class="filter-group" id="traveler-filters"></div>
+  </div>
 </div>
 
 <div class="main">
@@ -179,6 +194,7 @@
             <th data-sort="tripType">Type <span class="sort-icon">↕</span></th>
             <th data-sort="distance">Distance <span class="sort-icon">↕</span></th>
             <th data-sort="duration">Duration <span class="sort-icon">↕</span></th>
+            <th>Who</th>
           </tr>
         </thead>
         <tbody id="flight-tbody"></tbody>
@@ -217,13 +233,20 @@ async function loadSheetData() {
     const obj = {};
     headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim(); });
     const date = obj.date || '';
+    const bool = v => v.toLowerCase() === 'true' || v === '1' || v.toLowerCase() === 'yes';
+    const travelers = [
+      bool(obj.gil   || '') ? 'G' : '',
+      bool(obj.magda || '') ? 'M' : '',
+      bool(obj.noa   || '') ? 'N' : '',
+    ].filter(Boolean);
     return {
       year: date ? parseInt(date.split('-')[0]) : null,
       date,
       route: obj.route || '',
       trip: obj.trip || '',
       distance: parseInt(obj.distance) || 0,
-      duration: obj.duration || ''
+      duration: obj.duration || '',
+      travelers: travelers.length ? travelers : ['G'],
     };
   }).filter(f => f.date && f.route);
 }
@@ -248,15 +271,36 @@ const COORDS = {
   wroclaw:[51.1079,17.0385],faro:[37.0194,-7.9322],poznan:[52.4064,16.9252],
   nice:[43.7102,7.262],brussels:[50.8503,4.3517],rome:[41.9028,12.4964],
   barcelona:[41.3851,2.1734],'saint petersburg':[59.9343,30.3351],
-  nuremberg:[49.4521,11.0767],madeira:[32.6669,-16.9241],
-  'baden-baden':[48.7605,8.2392]
+  nuremberg:[49.4521,11.0767],madeira:[32.6669,-16.9241],funchal:[32.6669,-16.9241],
+  'baden-baden':[48.7605,8.2392],
+  lodz:[51.7592,19.4559],alicante:[38.3452,-0.4815],dubrovnik:[42.6507,18.0944],
+  cairo:[30.0444,31.2357],milan:[45.4654,9.1859],stockholm:[59.3293,18.0686],
+  frankfurt:[50.1109,8.6821],helsinki:[60.1699,24.9384],paphos:[34.7754,32.4234],
+  'surat thani':[9.1382,99.3217],'chiang mai':[18.7883,98.9853],
+  copenhagen:[55.6761,12.5683],seville:[37.3891,-5.9845],venice:[45.4408,12.3155],
+  valencia:[39.4699,-0.3763],lanzarote:[28.9635,-13.5469],mallorca:[39.6953,3.0176],
+  zurich:[47.3769,8.5417],'punta cana':[18.5601,-68.3725],
+  cancun:[21.1619,-86.8515],'san jose':[9.9281,-84.0907],
+  'san salvador':[13.6929,-89.2182],guatemala:[14.6349,-90.5069],
+  bergen:[60.3913,5.3221],rzeszow:[50.0413,21.9992],
+  bucharest:[44.4268,26.1025],'las vegas':[36.1699,-115.1398],
+  bilbao:[43.263,-2.9349],porto:[41.1496,-8.6109],
+  thessaloniki:[40.6401,22.9444],sarajevo:[43.8563,18.4131],
+  zagreb:[45.815,15.9819],bratislava:[48.1486,17.1077],
+  sofia:[42.6977,23.3219],vilnius:[54.6872,25.2797],
+  tallinn:[59.437,24.7536],riga:[56.946,24.1059],
+  edinburgh:[55.9533,-3.1883],dublin:[53.3498,-6.2603],
+  birmingham:[52.4862,-1.8904],
 };
 
-// Routes are now "City (CODE) -> City (CODE)" — extract city name before the "("
 function parseRoute(r){
-  const parts = r.split('->').map(p=>p.trim());
-  if(parts.length>=2) return [extractCity(parts[0]), extractCity(parts[parts.length-1])];
-  return [extractCity(r), null];
+  if(r.includes('->')) {
+    const parts = r.split('->').map(p=>p.trim());
+    return [extractCity(parts[0]), extractCity(parts[parts.length-1])];
+  }
+  const parts = r.split(' - ').map(p=>p.trim());
+  if(parts.length>=2) return [parts[0], parts[parts.length-1]];
+  return [r, null];
 }
 
 function extractCity(s){
@@ -265,7 +309,12 @@ function extractCity(s){
 
 function normCity(s){
   s = extractCity(s).toLowerCase().trim();
-  const aliases = {'qatar':'doha','poznań':'poznan'};
+  const aliases = {
+    'qatar':'doha','poznań':'poznan','wrocław':'wroclaw',
+    'reykjavík':'reykjavik','pafos':'paphos','larnaka':'larnaca',
+    'cracow':'krakow','funchal':'funchal','kraków':'krakow',
+    'gdańsk':'gdansk','łódź':'lodz',
+  };
   return aliases[s] || s;
 }
 
@@ -308,8 +357,9 @@ function processFlights(raw){
 let FLIGHTS = [];
 
 // ── Filters state ────────────────────────────────────────────────
-let activeYears = new Set();  // empty = All
-let activeTypes = new Set();  // empty = All
+let activeYears = new Set();
+let activeTypes = new Set();
+let activeTravelers = new Set();
 let sortCol = 'date';
 let sortDir = -1;
 
@@ -317,6 +367,7 @@ function filtered(){
   return FLIGHTS.filter(f=>{
     if(activeYears.size > 0 && !activeYears.has(f.year)) return false;
     if(activeTypes.size > 0 && !activeTypes.has(f.tripType)) return false;
+    if(activeTravelers.size > 0 && !f.travelers.some(t=>activeTravelers.has(t))) return false;
     return true;
   });
 }
@@ -410,8 +461,30 @@ function buildFilters(){
     });
   }
 
+  function renderTravelerChips(){
+    const tf = document.getElementById('traveler-filters');
+    tf.innerHTML='';
+    const allBtn = document.createElement('button');
+    allBtn.className='chip'+(activeTravelers.size===0?' active':'');
+    allBtn.textContent='All';
+    allBtn.onclick=()=>{ activeTravelers.clear(); renderTravelerChips(); refresh(); };
+    tf.appendChild(allBtn);
+    [['G','Gil'],['M','Magda'],['N','Noa']].forEach(([key,label])=>{
+      const isActive=activeTravelers.has(key);
+      const btn=document.createElement('button');
+      btn.className='chip'+(isActive?` active tw-${key}`:'');
+      btn.textContent=label;
+      btn.onclick=()=>{
+        if(activeTravelers.has(key)) activeTravelers.delete(key); else activeTravelers.add(key);
+        renderTravelerChips(); refresh();
+      };
+      tf.appendChild(btn);
+    });
+  }
+
   renderYearChips();
   renderTypeChips();
+  renderTravelerChips();
 }
 
 // ── Map ──────────────────────────────────────────────────────────
@@ -557,13 +630,15 @@ function buildTable(flights){
   sorted.forEach(f=>{
     const tr=document.createElement('tr');
     const typeKey=f.tripType.replace(/\s+/g,'-');
+    const tBadges = (f.travelers||[]).map(t=>`<span class="tbadge ${t}">${t}</span>`).join('');
     tr.innerHTML=`
       <td class="date">${f.date||'<span class="no-data">—</span>'}</td>
       <td class="route">${esc(f.route)}</td>
       <td class="trip-name">${f.tripLabel?esc(f.tripLabel):'<span class="no-data">—</span>'}</td>
       <td><span class="badge ${typeKey}">${f.tripType}</span></td>
       <td style="color:var(--muted)">${f.distance?f.distance.toLocaleString()+' km':'—'}</td>
-      <td style="color:var(--muted)">${f.duration||'—'}</td>`;
+      <td style="color:var(--muted)">${f.duration||'—'}</td>
+      <td><div class="traveler-badges">${tBadges}</div></td>`;
     tbody.appendChild(tr);
   });
   document.getElementById('showing-count').textContent=`${sorted.length} of ${FLIGHTS.length} flights`;
