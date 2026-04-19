@@ -268,8 +268,8 @@ async function loadSheetData() {
   const url = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const csv = await res.text();
-  const lines = csv.trim().split('\n').filter(l => l.trim());
+  const csv = (await res.text()).replace(/^\uFEFF/, '');
+  const lines = csv.trim().split(/\r?\n/).filter(l => l.trim());
   const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().trim());
   return lines.slice(1).map(line => {
     const vals = parseCSVLine(line);
@@ -796,7 +796,7 @@ async function startApp() {
   }
   loadingEl.style.display = 'none';
   document.getElementById('change-sheet-btn').style.display = 'block';
-  initGlobe();
+  try { initGlobe(); } catch(e) { console.error('Globe init failed:', e); }
   buildFilters();
   refresh();
 }
