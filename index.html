@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AirTrail</title>
-<script src="https://cdn.jsdelivr.net/npm/globe.gl/dist/globe.gl.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
@@ -50,7 +51,7 @@
   .section-title{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px}
 
   /* ── Map ── */
-  #map{width:100%;height:500px;border-radius:12px;border:1px solid var(--border);z-index:1;overflow:hidden}
+  #map{width:100%;height:420px;border-radius:12px;border:1px solid var(--border);z-index:1}
 
   /* ── Charts ── */
   .charts-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
@@ -268,8 +269,8 @@ async function loadSheetData() {
   const url = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const csv = (await res.text()).replace(/^\uFEFF/, '');
-  const lines = csv.trim().split(/\r?\n/).filter(l => l.trim());
+  const csv = await res.text();
+  const lines = csv.trim().split('\n').filter(l => l.trim());
   const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().trim());
   return lines.slice(1).map(line => {
     const vals = parseCSVLine(line);
@@ -603,63 +604,67 @@ function buildFilters(){
 }
 
 // ── Map ──────────────────────────────────────────────────────────
-// ── Globe ────────────────────────────────────────────────────────
 const isMobile = () => window.innerWidth <= 768;
-let globeInstance = null;
+const map = L.map('map',{zoomControl:true, scrollWheelZoom:false, tap:false}).setView([40,15], isMobile()?2:3);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+  attribution:'&copy; OpenStreetMap, &copy; CartoDB',maxZoom:19
+}).addTo(map);
 
-function initGlobe() {
-  const el = document.getElementById('map');
-  const tip = s => `<div style="background:#161b22;border:1px solid #30363d;border-radius:6px;padding:6px 10px;font-size:12px;color:#e6edf3;pointer-events:none">${s}</div>`;
-  globeInstance = Globe()
-    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-night.jpg')
-    .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
-    .arcColor(d => d.color)
-    .arcOpacity(0.75)
-    .arcStroke(0.5)
-    .arcAltitudeAutoScale(0.3)
-    .arcLabel(d => tip(d.label))
-    .pointColor(d => d.color)
-    .pointAltitude(0.005)
-    .pointRadius(d => Math.max(0.3, Math.min(0.7, 0.2 + d.count * 0.05)))
-    .pointLabel(d => tip(`<b>${d.city}</b><br>${d.count} flight${d.count>1?'s':''}`))
-    (el);
-  globeInstance.pointOfView({ lat: 30, lng: 15, altitude: 2.2 });
-  globeInstance.controls().autoRotate = false;
+let routeLayers = L.layerGroup().addTo(map);
+let markerLayers = L.layerGroup().addTo(map);
+
+function bezier(from,to){
+  const pts=[];
+  const mlat=(from[0]+to[0])/2, mlng=(from[1]+to[1])/2;
+  const dlat=to[0]-from[0], dlng=to[1]-from[1];
+  const dist=Math.sqrt(dlat*dlat+dlng*dlng);
+  const off=dist*0.25;
+  const pl=-dlng/dist*off, plng=dlat/dist*off;
+  const cl=mlat+pl, clng=mlng+plng;
+  for(let t=0;t<=1;t+=0.025){
+    pts.push([(1-t)*(1-t)*from[0]+2*(1-t)*t*cl+t*t*to[0],
+              (1-t)*(1-t)*from[1]+2*(1-t)*t*clng+t*t*to[1]]);
+  }
+  return pts;
 }
 
-function drawMap(flights) {
-  if (!globeInstance) return;
-  const arcs = [];
-  const cityCount = {};
-  const seen = new Set();
+function drawMap(flights){
+  routeLayers.clearLayers();
+  markerLayers.clearLayers();
 
-  flights.forEach(f => {
-    const [a, b] = parseRoute(f.route);
-    const ca = a ? getCoords(a) : null, cb = b ? getCoords(b) : null;
-    if (ca) { const k = normCity(a); cityCount[k] = (cityCount[k]||0)+1; }
-    if (cb) { const k = normCity(b); cityCount[k] = (cityCount[k]||0)+1; }
-    if (ca && cb) {
-      const key = [normCity(a), normCity(b)].sort().join('|');
-      if (!seen.has(key)) {
-        seen.add(key);
+  const cityCount = {};
+  const routes = new Set();
+
+  flights.forEach(f=>{
+    const [a,b]=parseRoute(f.route);
+    const ca=a?getCoords(a):null, cb=b?getCoords(b):null;
+    if(ca){ const k=normCity(a); cityCount[k]=(cityCount[k]||0)+1; }
+    if(cb){ const k=normCity(b); cityCount[k]=(cityCount[k]||0)+1; }
+
+    if(ca&&cb){
+      const key=[normCity(a),normCity(b)].sort().join('|');
+      if(!routes.has(key)){
+        routes.add(key);
+        const color = TYPE_COLOR[f.tripType]||'#8b949e';
+        const pts = bezier(ca,cb);
         const distLabel = f.distance ? `${f.distance.toLocaleString()} km` : '';
         const durLabel  = f.duration || '';
-        arcs.push({
-          startLat: ca[0], startLng: ca[1], endLat: cb[0], endLng: cb[1],
-          color: TYPE_COLOR[f.tripType] || '#8b949e',
-          label: `<b>${a} → ${b}</b>${distLabel ? `<br>${distLabel}${durLabel ? ' · '+durLabel : ''}` : ''}`
-        });
+        const tip = `<b>${extractCity(a)} → ${extractCity(b)}</b>${distLabel?`<br>${distLabel}${durLabel?' · '+durLabel:''}` :''}`;
+        L.polyline(pts,{color,weight:1.5,opacity:.55,smoothFactor:1})
+          .bindTooltip(tip,{className:'leaflet-tooltip-dark',sticky:true})
+          .addTo(routeLayers);
       }
     }
   });
 
-  const points = Object.entries(cityCount)
-    .map(([city, count]) => {
-      const c = COORDS[city]; if (!c) return null;
-      return { lat: c[0], lng: c[1], city: city.charAt(0).toUpperCase()+city.slice(1), count, color: '#e6edf3' };
-    }).filter(Boolean);
-
-  globeInstance.arcsData(arcs).pointsData(points);
+  Object.entries(cityCount).forEach(([city,cnt])=>{
+    const c=COORDS[city]; if(!c) return;
+    const r=Math.max(4,Math.min(10,3+cnt*0.5));
+    L.circleMarker(c,{radius:r,fillColor:'#e6edf3',color:'#0d1117',weight:1.5,fillOpacity:.9})
+      .bindTooltip(`<b>${city.charAt(0).toUpperCase()+city.slice(1)}</b><br>${cnt} flight${cnt>1?'s':''}`,
+        {className:'leaflet-tooltip-dark',sticky:true})
+      .addTo(markerLayers);
+  });
 }
 
 // ── Charts ───────────────────────────────────────────────────────
@@ -767,6 +772,11 @@ document.querySelectorAll('thead th[data-sort]').forEach(th=>{
   });
 });
 
+// ── Leaflet tooltip style ────────────────────────────────────────
+const style=document.createElement('style');
+style.textContent=`.leaflet-tooltip-dark{background:#161b22;border:1px solid #30363d;color:#e6edf3;border-radius:6px;font-size:12px;padding:6px 10px;}.leaflet-tooltip-dark::before{display:none}`;
+document.head.appendChild(style);
+
 // ── Main refresh ─────────────────────────────────────────────────
 function refresh(){
   const f=filtered();
@@ -774,10 +784,12 @@ function refresh(){
   drawMap(f);
   buildCharts(f);
   buildTable(f);
+  setTimeout(()=>map.invalidateSize(),50);
 }
 
 // ── Resize handler ────────────────────────────────────────────────
 window.addEventListener('resize',()=>{
+  map.invalidateSize();
   Object.values(charts).forEach(c=>c.resize());
 });
 
@@ -796,9 +808,12 @@ async function startApp() {
   }
   loadingEl.style.display = 'none';
   document.getElementById('change-sheet-btn').style.display = 'block';
-  try { initGlobe(); } catch(e) { console.error('Globe init failed:', e); }
   buildFilters();
   refresh();
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    map.invalidateSize();
+    map.setView([40,15], isMobile()?2:3);
+  }));
 }
 
 // ── Setup screen ──────────────────────────────────────────────────
