@@ -366,9 +366,10 @@ function saveScriptConfig(url, secret) {
 }
 
 // ── Write to sheet via Apps Script ────────────────────────────────
-// Apps Script always issues a 302 redirect, which causes browsers to
-// convert POST → GET (dropping the body). So we use GET with URL params
-// instead — it survives the redirect and returns a readable JSON response.
+// Apps Script 302 redirects cross-origin, so the browser blocks any
+// attempt to read the response (CORS). We use no-cors GET with params in
+// the URL — the request goes through, doGet runs on the script server,
+// and we reload the sheet afterwards to confirm the change.
 async function sheetWrite(action, payload) {
   const cfg = getScriptConfig();
   if (!cfg) throw new Error('No Apps Script configured');
@@ -376,10 +377,9 @@ async function sheetWrite(action, payload) {
   for (const [k, v] of Object.entries(payload)) {
     params.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
   }
-  const res = await fetch(`${cfg.url}?${params}`, { redirect: 'follow' });
-  let json;
-  try { json = await res.json(); } catch { return; } // opaque redirect — assume ok
-  if (json && json.error) throw new Error(json.error);
+  await fetch(`${cfg.url}?${params}`, { mode: 'no-cors' });
+  // Brief pause to let the script finish executing before we re-read the sheet
+  await new Promise(r => setTimeout(r, 800));
 }
 
 function parseCSVLine(line) {
