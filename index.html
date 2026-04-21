@@ -366,17 +366,20 @@ function saveScriptConfig(url, secret) {
 }
 
 // ── Write to sheet via Apps Script ────────────────────────────────
-// Uses no-cors so the request works from any origin without preflight.
-// We can't read the response in no-cors mode, so after each write we
-// reload from the sheet to confirm the change.
+// Apps Script always issues a 302 redirect, which causes browsers to
+// convert POST → GET (dropping the body). So we use GET with URL params
+// instead — it survives the redirect and returns a readable JSON response.
 async function sheetWrite(action, payload) {
   const cfg = getScriptConfig();
   if (!cfg) throw new Error('No Apps Script configured');
-  await fetch(cfg.url, {
-    method: 'POST',
-    mode: 'no-cors',
-    body: JSON.stringify({ secret: cfg.secret, action, ...payload }),
-  });
+  const params = new URLSearchParams({ secret: cfg.secret, action });
+  for (const [k, v] of Object.entries(payload)) {
+    params.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
+  }
+  const res = await fetch(`${cfg.url}?${params}`, { redirect: 'follow' });
+  let json;
+  try { json = await res.json(); } catch { return; } // opaque redirect — assume ok
+  if (json && json.error) throw new Error(json.error);
 }
 
 function parseCSVLine(line) {
@@ -394,7 +397,7 @@ function parseCSVLine(line) {
 
 async function loadSheetData() {
   const { id, gid } = getSavedSheet();
-  const url = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
+  const url = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv${gid && gid !== '0' ? `&gid=${gid}` : ''}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const csv = (await res.text()).replace(/^\uFEFF/, '');
@@ -1018,8 +1021,6 @@ async function reloadData() {
   const loadingEl = document.getElementById('loading');
   loadingEl.querySelector('.load-msg').textContent = 'Syncing with Google Sheets…';
   loadingEl.style.display = 'flex';
-  // Give the Apps Script a moment to commit the write before we re-read
-  await new Promise(r => setTimeout(r, 1800));
   try {
     const raw = await loadSheetData();
     FLIGHTS = processFlights(raw);
@@ -1047,7 +1048,7 @@ async function startApp() {
     const raw = await loadSheetData();
     FLIGHTS = processFlights(raw);
   } catch(e) {
-    msgEl.textContent = 'Failed to load. Check the sheet is shared publicly, then try again.';
+    msgEl.textContent = `Error: ${e.message}. Check the sheet is shared publicly and the URL is correct.`;
     console.error(e);
     return;
   }
