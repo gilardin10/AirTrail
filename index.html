@@ -93,6 +93,39 @@
   .chip.active.tw-M{background:#ff7b72;border-color:#ff7b72}
   .chip.active.tw-N{background:#3fb950;border-color:#3fb950}
 
+  /* ── Row edit button ── */
+  .btn-row{background:none;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:2px 8px;font-size:11px;cursor:pointer;line-height:1.6;white-space:nowrap}
+  .btn-row:hover{border-color:var(--blue);color:var(--blue)}
+  thead th.th-actions{cursor:default}
+  thead th.th-actions:hover{color:var(--muted)}
+
+  /* ── Add flight button ── */
+  .add-flight-btn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer}
+  .add-flight-btn:hover{border-color:var(--green);color:var(--green)}
+
+  /* ── Modal ── */
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px}
+  .modal{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto}
+  .modal h3{font-size:15px;font-weight:600;margin-bottom:20px}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .form-group{display:flex;flex-direction:column;gap:5px}
+  .form-group.full{grid-column:1/-1}
+  .form-group>label{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.4px;text-transform:uppercase}
+  .form-input{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none;width:100%}
+  .form-input:focus{border-color:var(--blue)}
+  .traveler-checks{display:flex;gap:16px;padding-top:2px}
+  .traveler-checks label{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text);font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer}
+  .modal-actions{display:flex;gap:8px;margin-top:20px;justify-content:flex-end;align-items:center}
+  .btn-primary{background:var(--blue);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer}
+  .btn-primary:hover{opacity:.85}
+  .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+  .btn-secondary{background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer}
+  .btn-secondary:hover{border-color:var(--blue);color:var(--blue)}
+  .btn-danger{background:none;border:1px solid transparent;color:var(--pink);border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;margin-right:auto}
+  .btn-danger:hover{border-color:var(--pink);background:rgba(255,123,114,.08)}
+  .btn-danger:disabled{opacity:.5;cursor:not-allowed}
+  .modal-error{color:var(--pink);font-size:12px;margin-top:10px;min-height:16px}
+
   /* ── Loading overlay ── */
   #loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999}
   .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
@@ -100,8 +133,8 @@
   .load-msg{color:var(--muted);font-size:14px}
 
   /* ── Setup screen ── */
-  #setup{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:9999;padding:20px}
-  .setup-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:40px;max-width:480px;width:100%;display:flex;flex-direction:column;gap:20px}
+  #setup{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:9999;padding:20px;overflow-y:auto}
+  .setup-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:40px;max-width:500px;width:100%;display:flex;flex-direction:column;gap:16px}
   .setup-logo{font-size:22px;font-weight:700;letter-spacing:-.5px}.setup-logo span{color:var(--blue)}
   .setup-card h2{font-size:18px;font-weight:600}
   .setup-card p{color:var(--muted);font-size:13px;line-height:1.6}
@@ -110,6 +143,9 @@
   .setup-btn{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;align-self:flex-start}
   .setup-btn:hover{opacity:.85}
   .setup-error{color:var(--pink);font-size:12px;min-height:16px}
+  .setup-divider{border:none;border-top:1px solid var(--border);margin:4px 0}
+  .setup-section-title{font-size:13px;font-weight:600}
+  .setup-section-title span{color:var(--muted);font-size:11px;font-weight:400}
   .header-settings{background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer}
   .header-settings:hover{border-color:var(--blue);color:var(--blue)}
 
@@ -128,6 +164,8 @@
     .chart-wrap{height:180px}
     tbody td{padding:8px 10px;font-size:12px}
     thead th{padding:8px 10px;font-size:10px}
+    .form-grid{grid-template-columns:1fr}
+    .form-group.full{grid-column:1}
   }
 </style>
 </head>
@@ -135,13 +173,69 @@
 
 <div id="loading"><div class="spinner"></div><div class="load-msg">Loading flight data from Google Sheets…</div></div>
 
+<!-- ── Flight add/edit modal ── -->
+<div id="flight-modal" class="modal-bg" style="display:none">
+  <div class="modal">
+    <h3 id="modal-title">Add Flight</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Date</label>
+        <input class="form-input" id="m-date" placeholder="2024 or 2024-06 or 2024-06-15">
+      </div>
+      <div class="form-group">
+        <label>Reason / Trip name</label>
+        <input class="form-input" id="m-reason" placeholder="2024 Japan">
+      </div>
+      <div class="form-group">
+        <label>From</label>
+        <input class="form-input" id="m-from" placeholder="Porto">
+      </div>
+      <div class="form-group">
+        <label>To</label>
+        <input class="form-input" id="m-to" placeholder="Warsaw">
+      </div>
+      <div class="form-group">
+        <label>Distance (km)</label>
+        <input class="form-input" id="m-distance" type="number" min="0" placeholder="2500">
+      </div>
+      <div class="form-group">
+        <label>Duration (decimal hours)</label>
+        <input class="form-input" id="m-time" type="number" min="0" step="0.1" placeholder="3.5">
+      </div>
+      <div class="form-group full">
+        <label>Travelers</label>
+        <div class="traveler-checks">
+          <label><input type="checkbox" id="m-gil"> Gil</label>
+          <label><input type="checkbox" id="m-magda"> Magda</label>
+          <label><input type="checkbox" id="m-noa"> Noa</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-error" id="modal-error"></div>
+    <div class="modal-actions">
+      <button class="btn-danger" id="modal-delete" style="display:none">Delete flight</button>
+      <button class="btn-secondary" id="modal-cancel">Cancel</button>
+      <button class="btn-primary" id="modal-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Setup screen ── -->
 <div id="setup">
   <div class="setup-card">
     <div class="setup-logo">✈ Air<span>Trail</span></div>
     <h2>Connect your Google Sheet</h2>
     <p>Paste the URL of your Google Sheet. Make sure it's shared as <strong>Anyone with the link → Viewer</strong>.</p>
     <input id="setup-input" class="setup-input" type="text" placeholder="https://docs.google.com/spreadsheets/d/…"/>
-    <button class="setup-btn" id="setup-btn">Load my flights</button>
+
+    <hr class="setup-divider">
+
+    <div class="setup-section-title">Write access <span>(optional — for adding, editing &amp; deleting entries)</span></div>
+    <p>Deploy the AirTrail Apps Script on your sheet, then paste its web app URL and your secret token here. Both are stored only in your browser — never in the source code.</p>
+    <input id="script-url-input" class="setup-input" type="text" placeholder="https://script.google.com/macros/s/…/exec"/>
+    <input id="script-secret-input" class="setup-input" type="password" placeholder="Secret token (you set this inside the script)"/>
+
+    <button class="setup-btn" id="setup-btn">Save &amp; Load</button>
     <div class="setup-error" id="setup-error"></div>
   </div>
 </div>
@@ -150,7 +244,7 @@
   <div class="logo">✈ Air<span>Trail</span></div>
   <div style="display:flex;align-items:center;gap:12px">
     <div style="color:var(--muted);font-size:12px" id="header-range"></div>
-    <button class="header-settings" id="change-sheet-btn" style="display:none" title="Change sheet">⚙ Change sheet</button>
+    <button class="header-settings" id="change-sheet-btn" style="display:none" title="Change sheet">⚙ Settings</button>
   </div>
 </header>
 
@@ -208,7 +302,10 @@
   <div class="table-card">
     <div class="table-header">
       <div class="table-title">Flight Log</div>
-      <div class="flight-count" id="showing-count"></div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="flight-count" id="showing-count"></div>
+        <button class="add-flight-btn" id="add-flight-btn" style="display:none">+ Add Flight</button>
+      </div>
     </div>
     <div class="table-wrap">
       <table>
@@ -221,6 +318,7 @@
             <th data-sort="distance">Distance <span class="sort-icon">↕</span></th>
             <th data-sort="duration">Duration <span class="sort-icon">↕</span></th>
             <th>Who</th>
+            <th class="th-actions" id="th-actions" style="display:none"></th>
           </tr>
         </thead>
         <tbody id="flight-tbody"></tbody>
@@ -251,6 +349,36 @@ function clearSheet() {
   localStorage.removeItem('airtrail_sheet_gid');
 }
 
+// ── Script config (write access) — stored only in localStorage ────
+function getScriptConfig() {
+  const url = localStorage.getItem('airtrail_script_url');
+  const secret = localStorage.getItem('airtrail_script_secret');
+  return url ? { url, secret: secret || '' } : null;
+}
+function saveScriptConfig(url, secret) {
+  if (url) {
+    localStorage.setItem('airtrail_script_url', url);
+    localStorage.setItem('airtrail_script_secret', secret || '');
+  } else {
+    localStorage.removeItem('airtrail_script_url');
+    localStorage.removeItem('airtrail_script_secret');
+  }
+}
+
+// ── Write to sheet via Apps Script ────────────────────────────────
+// Uses no-cors so the request works from any origin without preflight.
+// We can't read the response in no-cors mode, so after each write we
+// reload from the sheet to confirm the change.
+async function sheetWrite(action, payload) {
+  const cfg = getScriptConfig();
+  if (!cfg) throw new Error('No Apps Script configured');
+  await fetch(cfg.url, {
+    method: 'POST',
+    mode: 'no-cors',
+    body: JSON.stringify({ secret: cfg.secret, action, ...payload }),
+  });
+}
+
 function parseCSVLine(line) {
   const result = [];
   let cur = '', inQ = false;
@@ -269,10 +397,10 @@ async function loadSheetData() {
   const url = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const csv = await res.text();
-  const lines = csv.trim().split('\n').filter(l => l.trim());
+  const csv = (await res.text()).replace(/^\uFEFF/, '');
+  const lines = csv.trim().split(/\r?\n/).filter(l => l.trim());
   const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().trim());
-  return lines.slice(1).map(line => {
+  return lines.slice(1).map((line, idx) => {
     const vals = parseCSVLine(line);
     const obj = {};
     headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim(); });
@@ -281,18 +409,16 @@ async function loadSheetData() {
     const to   = obj.to   || '';
     const route = (from && to) ? `${from} - ${to}` : (from || to);
 
-    // "2,000 km" → 2000
     const distRaw = (obj.distance || '').replace(/,/g, '').replace(/[^\d.]/g, '');
     const distance = parseFloat(distRaw) || 0;
 
-    // "3.5 h" → "3h 30m"
     const timeRaw = obj.time || '';
-    let duration = '';
+    let duration = '', timeDecimal = null;
     const tm = timeRaw.match(/^([\d.]+)/);
     if (tm) {
-      const total = parseFloat(tm[1]);
-      const h = Math.floor(total);
-      const m = Math.round((total - h) * 60);
+      timeDecimal = parseFloat(tm[1]);
+      const h = Math.floor(timeDecimal);
+      const m = Math.round((timeDecimal - h) * 60);
       duration = `${h}h ${String(m).padStart(2, '0')}m`;
     }
 
@@ -304,12 +430,13 @@ async function loadSheetData() {
     ].filter(Boolean);
     return {
       year: date ? parseInt(date.split('-')[0]) : null,
-      date,
-      route,
+      date, route,
+      _from: from, _to: to,
       trip: obj.reason || '',
-      distance,
-      duration,
+      distance, duration,
+      _timeDecimal: timeDecimal,
       travelers: travelers.length ? travelers : ['G'],
+      _rowIndex: idx + 2, // sheet row number (row 1 = headers)
     };
   }).filter(f => f.date && f.route);
 }
@@ -399,7 +526,7 @@ const COORDS = {
   'san salvador':[13.6929,-89.2182],guatemala:[14.6349,-90.5069],
   bergen:[60.3913,5.3221],rzeszow:[50.0413,21.9992],
   bucharest:[44.4268,26.1025],'las vegas':[36.1699,-115.1398],
-  bilbao:[43.263,-2.9349],porto:[41.1496,-8.6109],
+  bilbao:[43.263,-2.9349],
   thessaloniki:[40.6401,22.9444],sarajevo:[43.8563,18.4131],
   zagreb:[45.815,15.9819],bratislava:[48.1486,17.1077],
   sofia:[42.6977,23.3219],vilnius:[54.6872,25.2797],
@@ -450,8 +577,8 @@ function classifyTrip(trip){
   if(!trip) return null;
   const t = trip.toLowerCase();
   if(t.includes('business')) return 'Business';
-if(t.includes('home')||t.includes('visit home')||t.includes('christmas at')||t.includes('nye at home')) return 'Visit Home';
-  if(t.includes('birthday')||t.includes('wedding')||t.includes("parents")) return 'Social';
+  if(t.includes('home')||t.includes('visit home')||t.includes('christmas at')||t.includes('nye at home')) return 'Visit Home';
+  if(t.includes('birthday')||t.includes('wedding')||t.includes('parents')) return 'Social';
   return 'Holiday';
 }
 
@@ -522,7 +649,6 @@ function updateStats(flights){
   const trips = new Set(flights.map(f=>f.tripLabel).filter(Boolean));
   document.getElementById('s-trips').textContent = trips.size;
 
-  // Header range always reflects full dataset
   if(FLIGHTS.length){
     const years = new Set(FLIGHTS.map(f=>f.year));
     const minY = Math.min(...[...years]), maxY = Math.max(...[...years]);
@@ -676,16 +802,13 @@ const CHART_DEFAULTS = {
 };
 
 function buildCharts(flights){
-  // Year chart
   const years = [...new Set(FLIGHTS.map(f=>f.year))].sort();
   const yearCounts = years.map(y=>flights.filter(f=>f.year===y).length);
   makeBar('yearChart',years,yearCounts,'#58a6ff');
 
-  // Distance per year chart
   const yearDist = years.map(y=>flights.filter(f=>f.year===y).reduce((s,f)=>s+(f.distance||0),0));
   makeBar('distChart',years,yearDist,'#bc8cff');
 
-  // Destinations chart
   const destCount={};
   flights.forEach(f=>{
     const [,b]=parseRoute(f.route);
@@ -694,7 +817,6 @@ function buildCharts(flights){
   const topDest=Object.entries(destCount).sort((a,b)=>b[1]-a[1]).slice(0,10);
   makeHBar('destChart',topDest.map(d=>d[0].charAt(0).toUpperCase()+d[0].slice(1)),topDest.map(d=>d[1]));
 
-  // Type chart
   const typeCounts={};
   flights.forEach(f=>{ typeCounts[f.tripType]=(typeCounts[f.tripType]||0)+1; });
   const typeEntries=Object.entries(typeCounts).sort((a,b)=>b[1]-a[1]);
@@ -730,6 +852,10 @@ function makeDoughnut(id,labels,data){
 
 // ── Table ────────────────────────────────────────────────────────
 function buildTable(flights){
+  const canWrite = !!getScriptConfig();
+  document.getElementById('th-actions').style.display = canWrite ? '' : 'none';
+  document.getElementById('add-flight-btn').style.display = canWrite ? '' : 'none';
+
   const sorted=[...flights].sort((a,b)=>{
     if(sortCol==='distance') return ((a.distance||0)-(b.distance||0))*sortDir;
     if(sortCol==='duration') return (parseMins(a.duration)-parseMins(b.duration))*sortDir;
@@ -751,7 +877,11 @@ function buildTable(flights){
       <td><span class="badge ${typeKey}">${f.tripType}</span></td>
       <td style="color:var(--muted)">${f.distance?f.distance.toLocaleString()+' km':'—'}</td>
       <td style="color:var(--muted)">${f.duration||'—'}</td>
-      <td><div class="traveler-badges">${tBadges}</div></td>`;
+      <td><div class="traveler-badges">${tBadges}</div></td>
+      ${canWrite ? '<td><button class="btn-row">Edit</button></td>' : ''}`;
+    if(canWrite){
+      tr.querySelector('.btn-row').addEventListener('click', () => openModal(f));
+    }
     tbody.appendChild(tr);
   });
   document.getElementById('showing-count').textContent=`${sorted.length} of ${FLIGHTS.length} flights`;
@@ -777,6 +907,102 @@ const style=document.createElement('style');
 style.textContent=`.leaflet-tooltip-dark{background:#161b22;border:1px solid #30363d;color:#e6edf3;border-radius:6px;font-size:12px;padding:6px 10px;}.leaflet-tooltip-dark::before{display:none}`;
 document.head.appendChild(style);
 
+// ── Modal ────────────────────────────────────────────────────────
+let _editFlight = null;
+
+function openModal(flight) {
+  _editFlight = flight || null;
+  const isEdit = !!flight;
+  document.getElementById('modal-title').textContent = isEdit ? 'Edit Flight' : 'Add Flight';
+  document.getElementById('m-date').value        = isEdit ? (flight.date || '') : '';
+  document.getElementById('m-reason').value      = isEdit ? (flight.trip || '') : '';
+  document.getElementById('m-from').value        = isEdit ? (flight._from || '') : '';
+  document.getElementById('m-to').value          = isEdit ? (flight._to || '') : '';
+  document.getElementById('m-distance').value    = isEdit && flight.distance ? flight.distance : '';
+  document.getElementById('m-time').value        = isEdit && flight._timeDecimal != null ? flight._timeDecimal : '';
+  document.getElementById('m-gil').checked       = isEdit ? flight.travelers.includes('G') : true;
+  document.getElementById('m-magda').checked     = isEdit ? flight.travelers.includes('M') : false;
+  document.getElementById('m-noa').checked       = isEdit ? flight.travelers.includes('N') : false;
+  document.getElementById('modal-delete').style.display = isEdit ? '' : 'none';
+  document.getElementById('modal-delete').disabled = false;
+  document.getElementById('modal-delete').textContent = 'Delete flight';
+  document.getElementById('modal-save').disabled = false;
+  document.getElementById('modal-save').textContent = 'Save';
+  document.getElementById('modal-error').textContent = '';
+  document.getElementById('flight-modal').style.display = 'flex';
+  document.getElementById('m-date').focus();
+}
+
+function closeModal() {
+  document.getElementById('flight-modal').style.display = 'none';
+  _editFlight = null;
+}
+
+document.getElementById('modal-cancel').onclick = closeModal;
+document.getElementById('flight-modal').addEventListener('click', e => {
+  if (e.target.id === 'flight-modal') closeModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('flight-modal').style.display !== 'none') closeModal();
+});
+
+document.getElementById('add-flight-btn').onclick = () => openModal(null);
+
+document.getElementById('modal-save').onclick = async () => {
+  const date = document.getElementById('m-date').value.trim();
+  const from = document.getElementById('m-from').value.trim();
+  const to   = document.getElementById('m-to').value.trim();
+  if (!date || !from || !to) {
+    document.getElementById('modal-error').textContent = 'Date, From, and To are required.';
+    return;
+  }
+  const row = [
+    date,
+    from,
+    to,
+    document.getElementById('m-reason').value.trim(),
+    document.getElementById('m-distance').value.trim() || '',
+    document.getElementById('m-time').value.trim() || '',
+    document.getElementById('m-gil').checked   ? 'TRUE' : 'FALSE',
+    document.getElementById('m-magda').checked ? 'TRUE' : 'FALSE',
+    document.getElementById('m-noa').checked   ? 'TRUE' : 'FALSE',
+  ];
+  const saveBtn = document.getElementById('modal-save');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Saving…';
+  document.getElementById('modal-error').textContent = '';
+  try {
+    if (_editFlight) {
+      await sheetWrite('update', { rowIndex: _editFlight._rowIndex, row });
+    } else {
+      await sheetWrite('add', { row });
+    }
+    closeModal();
+    await reloadData();
+  } catch(e) {
+    document.getElementById('modal-error').textContent = e.message;
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save';
+  }
+};
+
+document.getElementById('modal-delete').onclick = async () => {
+  if (!confirm('Delete this flight? This cannot be undone.')) return;
+  const delBtn = document.getElementById('modal-delete');
+  delBtn.disabled = true;
+  delBtn.textContent = 'Deleting…';
+  document.getElementById('modal-error').textContent = '';
+  try {
+    await sheetWrite('delete', { rowIndex: _editFlight._rowIndex });
+    closeModal();
+    await reloadData();
+  } catch(e) {
+    document.getElementById('modal-error').textContent = e.message;
+    delBtn.disabled = false;
+    delBtn.textContent = 'Delete flight';
+  }
+};
+
 // ── Main refresh ─────────────────────────────────────────────────
 function refresh(){
   const f=filtered();
@@ -785,6 +1011,24 @@ function refresh(){
   buildCharts(f);
   buildTable(f);
   setTimeout(()=>map.invalidateSize(),50);
+}
+
+// ── Reload data from sheet (after writes) ─────────────────────────
+async function reloadData() {
+  const loadingEl = document.getElementById('loading');
+  loadingEl.querySelector('.load-msg').textContent = 'Syncing with Google Sheets…';
+  loadingEl.style.display = 'flex';
+  // Give the Apps Script a moment to commit the write before we re-read
+  await new Promise(r => setTimeout(r, 1800));
+  try {
+    const raw = await loadSheetData();
+    FLIGHTS = processFlights(raw);
+    buildFilters();
+    refresh();
+  } catch(e) {
+    console.error('Reload failed:', e);
+  }
+  loadingEl.style.display = 'none';
 }
 
 // ── Resize handler ────────────────────────────────────────────────
@@ -797,6 +1041,7 @@ window.addEventListener('resize',()=>{
 async function startApp() {
   const loadingEl = document.getElementById('loading');
   const msgEl = loadingEl.querySelector('.load-msg');
+  msgEl.textContent = 'Loading flight data from Google Sheets…';
   loadingEl.style.display = 'flex';
   try {
     const raw = await loadSheetData();
@@ -817,8 +1062,8 @@ async function startApp() {
 }
 
 // ── Setup screen ──────────────────────────────────────────────────
-const setupEl = document.getElementById('setup');
-const setupBtn = document.getElementById('setup-btn');
+const setupEl    = document.getElementById('setup');
+const setupBtn   = document.getElementById('setup-btn');
 const setupInput = document.getElementById('setup-input');
 const setupError = document.getElementById('setup-error');
 
@@ -826,7 +1071,18 @@ function showSetup() {
   setupEl.style.display = 'flex';
   document.getElementById('loading').style.display = 'none';
   document.getElementById('change-sheet-btn').style.display = 'none';
-  setupInput.value = '';
+
+  const saved = getSavedSheet();
+  if (saved) {
+    setupInput.value = `https://docs.google.com/spreadsheets/d/${saved.id}/edit?gid=${saved.gid}`;
+  } else {
+    setupInput.value = '';
+  }
+
+  const cfg = getScriptConfig();
+  document.getElementById('script-url-input').value    = cfg ? cfg.url : '';
+  document.getElementById('script-secret-input').value = cfg ? cfg.secret : '';
+
   setupError.textContent = '';
 }
 
@@ -837,14 +1093,17 @@ setupBtn.addEventListener('click', () => {
     return;
   }
   saveSheet(parsed.id, parsed.gid);
+
+  const scriptUrl    = document.getElementById('script-url-input').value.trim();
+  const scriptSecret = document.getElementById('script-secret-input').value.trim();
+  saveScriptConfig(scriptUrl, scriptSecret);
+
   setupEl.style.display = 'none';
   startApp();
 });
 setupInput.addEventListener('keydown', e => { if(e.key==='Enter') setupBtn.click(); });
 
 document.getElementById('change-sheet-btn').addEventListener('click', () => {
-  clearSheet();
-  // reset state
   FLIGHTS = [];
   activeYears.clear(); activeTypes.clear(); activeTravelers.clear();
   document.getElementById('year-filters').innerHTML = '';
