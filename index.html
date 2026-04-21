@@ -366,20 +366,44 @@ function saveScriptConfig(url, secret) {
 }
 
 // ── Write to sheet via Apps Script ────────────────────────────────
-// Apps Script 302 redirects cross-origin, so the browser blocks any
-// attempt to read the response (CORS). We use no-cors GET with params in
-// the URL — the request goes through, doGet runs on the script server,
-// and we reload the sheet afterwards to confirm the change.
+// fetch() is blocked by CORS on the Apps Script redirect chain.
+// A hidden-iframe form submission bypasses CORS entirely — iframes
+// have no CORS restriction for navigation, so the request always
+// reaches the script. We wait for the iframe to load (= script done)
+// then reload the sheet to confirm.
 async function sheetWrite(action, payload) {
   const cfg = getScriptConfig();
   if (!cfg) throw new Error('No Apps Script configured');
-  const params = new URLSearchParams({ secret: cfg.secret, action });
-  for (const [k, v] of Object.entries(payload)) {
-    params.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
+
+  const iframeName = 'at-submit-' + Date.now();
+  const iframe = Object.assign(document.createElement('iframe'), {
+    name: iframeName, style: 'display:none'
+  });
+  document.body.appendChild(iframe);
+
+  const form = Object.assign(document.createElement('form'), {
+    method: 'GET', action: cfg.url, target: iframeName
+  });
+  const { gid } = getSavedSheet();
+  const allParams = { secret: cfg.secret, action, gid, ...payload };
+  console.log('[AirTrail] sheetWrite', action, allParams);
+  for (const [k, v] of Object.entries(allParams)) {
+    const inp = Object.assign(document.createElement('input'), {
+      type: 'hidden', name: k,
+      value: typeof v === 'object' ? JSON.stringify(v) : String(v)
+    });
+    form.appendChild(inp);
   }
-  await fetch(`${cfg.url}?${params}`, { mode: 'no-cors' });
-  // Brief pause to let the script finish executing before we re-read the sheet
-  await new Promise(r => setTimeout(r, 800));
+  document.body.appendChild(form);
+
+  await new Promise(resolve => {
+    iframe.onload = resolve;
+    form.submit();
+    setTimeout(resolve, 5000); // safety timeout
+  });
+
+  document.body.removeChild(form);
+  document.body.removeChild(iframe);
 }
 
 function parseCSVLine(line) {
